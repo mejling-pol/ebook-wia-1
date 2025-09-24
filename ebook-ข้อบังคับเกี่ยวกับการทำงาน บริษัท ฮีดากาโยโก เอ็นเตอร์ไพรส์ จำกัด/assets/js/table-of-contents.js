@@ -44,7 +44,7 @@
       'cursor': 'pointer',
       'z-index': 10,
       'background-color': 'rgba(0,0,0,0.0)', // โปร่งใส
-      'border': '1px solid rgba(0,0,0,1)', // เส้นขอบบางๆ ช่วยให้เห็นพื้นที่
+      // 'border': '1px solid rgba(0,0,0,1)', // เส้นขอบบางๆ ช่วยให้เห็นพื้นที่
       'border-radius': '4px'
     };
 
