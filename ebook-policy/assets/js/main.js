@@ -76,6 +76,7 @@
     },
 
     render: function () {
+      this.playPageFlipSound();
       var settings = window.FlipbookSettings;
       var options = $.extend({
         responsive: true,
@@ -134,20 +135,8 @@
       });
     },
     playPageFlipSound: function () {
-      // Check if sound is enabled in settings (default true)
       if (window.FlipbookSettings && window.FlipbookSettings.enableSound !== false) {
-        // Create audio element if doesn't exist
-        if (!window.pageFlipSound) {
-          window.pageFlipSound = new Audio('assets/sounds/page-flip.mp3');
-          window.pageFlipSound.volume = 0.7; // Set volume to 70%
-        }
-
-        // Reset and play sound
-        window.pageFlipSound.currentTime = 0;
-        window.pageFlipSound.play().catch(function (error) {
-          // Silently fail if audio can't be played (common in some browsers without user interaction)
-          console.log('Audio play failed:', error);
-        });
+        window.FlipbookSettings.audioElement.play();
       }
     },
 
@@ -1081,4 +1070,5 @@ FlipbookSettings = {
   pageFolder: 'assets/book',
   loadRegions: false,
   enableSound: true, // เปิดใช้เสียงพลิกหน้าเมื่อเปลี่ยนหน้า
+  audioElement: document.getElementById("myAudio")
 };
