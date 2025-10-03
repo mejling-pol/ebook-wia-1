@@ -13,6 +13,17 @@
   }, u.prototype.options = function (b) { var c = this._data; return void 0 === b ? c.options : (c.options = a.extend(c.options, b), void 0) }, b.widgetFactory("menu", u)
 }(jQuery);
 
+async function playAudio() {
+  let ctx = new AudioContext();
+  let response = await fetch("assets/sounds/page-flip.mp3");
+  let arrayBuffer = await response.arrayBuffer();
+  let audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+  let source = ctx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(ctx.destination);
+  source.start();
+
+}
 /**
  * Turn.js Catalog App
  * Based on turn.js 5th release available on turnjs.com
@@ -20,7 +31,6 @@
  * All rights reserved
  */
 (function (window, $, Backbone) {
-  'use strict';
   /* Singlethon abstract class */
 
   var SingleView = Backbone.View.extend({},
@@ -52,6 +62,7 @@
       'pinch': '_pinchEvent',
       'zoomed': '_zoomedEvent',
       'turned': '_turnedEvent',
+      'turning': '_turningEvent',
       'vmouseover .ui-arrow-control': '_hoverArrowEvent',
       'vmouseout .ui-arrow-control': '_nohoverArrowEvent',
       'vmousedown .ui-arrow-control': '_pressArrowEvent',
@@ -75,7 +86,6 @@
     },
 
     render: function () {
-      this.playPageFlipSound();
       var settings = window.FlipbookSettings;
       var options = $.extend({
         responsive: true,
@@ -133,21 +143,30 @@
     },
     playPageFlipSound: function () {
       if (window.FlipbookSettings && window.FlipbookSettings.enableSound !== false) {
-        window.FlipbookSettings.audioElement.play();
+      console.log('Playing page flip sound');
+      // Initialize audio if not already done
+        setTimeout(function () {
+          playAudio();
+        }, 0);
       }
     },
 
-    _turnedEvent: function (event, page) {
+    _turningEvent: function (event, page, view) {
+      console.log('Turning to page:', page);
+      
+      // Play sound at the start of page turning for faster response
       this.playPageFlipSound();
+    },
+
+    _turnedEvent: function (event, page) {
+      console.log('Turned to page:', page);
+      // Handle other tasks after the page is fully turned
       AppRouter.getInstance().navigate('page/' + page, { trigger: false });
       if (window.FlipbookSettings.loadRegions) {
         this._loadRegions(page);
       }
 
       this._updateInlineShadows();
-
-      // Play page flip sound when page is turned
-
     },
 
     _hoverArrowEvent: function (event) {
@@ -1067,5 +1086,4 @@ FlipbookSettings = {
   pageFolder: 'assets/book',
   loadRegions: false,
   enableSound: true, // เปิดใช้เสียงพลิกหน้าเมื่อเปลี่ยนหน้า
-  audioElement: document.getElementById("myAudio")
 };
