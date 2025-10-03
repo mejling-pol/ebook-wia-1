@@ -13,16 +13,73 @@
   }, u.prototype.options = function (b) { var c = this._data; return void 0 === b ? c.options : (c.options = a.extend(c.options, b), void 0) }, b.widgetFactory("menu", u)
 }(jQuery);
 
-async function playAudio() {
-  let ctx = new AudioContext();
-  let response = await fetch("assets/sounds/page-flip.mp3");
-  let arrayBuffer = await response.arrayBuffer();
-  let audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-  let source = ctx.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(ctx.destination);
-  source.start();
+// Global audio context and buffer for iOS compatibility  
+let globalAudioContext = null;
+let audioBuffer = null;
+let audioInitialized = false;
 
+async function initializeAudio() {
+  if (!globalAudioContext && !audioInitialized) {
+    try {
+      // Only create AudioContext if we haven't tried before
+      audioInitialized = true;
+      globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Resume context if needed
+      if (globalAudioContext.state === 'suspended') {
+        await globalAudioContext.resume();
+      }
+      
+      // Preload audio buffer
+      if (!audioBuffer) {
+        let response = await fetch("assets/sounds/page-flip.mp3");
+        let arrayBuffer = await response.arrayBuffer();
+        audioBuffer = await globalAudioContext.decodeAudioData(arrayBuffer);
+      }
+      
+      console.log('Audio initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize audio:', error);
+      globalAudioContext = null;
+      audioInitialized = false;
+    }
+  }
+}
+
+async function playAudio() {
+  try {
+    // If AudioContext doesn't exist, create it now (this should be called from user gesture)
+    if (!globalAudioContext) {
+      await initializeAudio();
+    }
+    
+    if (!globalAudioContext || !audioBuffer) {
+      console.warn('Audio not initialized, trying again...');
+      // Try one more time
+      await initializeAudio();
+      if (!globalAudioContext || !audioBuffer) {
+        console.warn('Audio initialization failed');
+        return;
+      }
+    }
+    
+    // Resume context if needed (iOS requirement)
+    if (globalAudioContext.state === 'suspended') {
+      await globalAudioContext.resume();
+    }
+    
+    // Create and play sound
+    let source = globalAudioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(globalAudioContext.destination);
+    source.start(0);
+    
+  } catch (error) {
+    console.error('Failed to play audio:', error);
+    // Reset for next attempt
+    globalAudioContext = null;
+    audioInitialized = false;
+  }
 }
 
 /**
@@ -79,6 +136,9 @@ async function playAudio() {
       $(window).keydown($.proxy(this, '_keydownEvent'));
       $('body').on('tap', '.ui-arrow-next-page', $.proxy(this, '_tapNextArrowEvent'));
       $('body').on('tap', '.ui-arrow-previous-page', $.proxy(this, '_tapPreviousArrowEvent'));
+
+      // Audio will be initialized when first needed during user interaction
+      // No need to pre-initialize, let playAudio() handle it when called
 
       // Tooltip for regions
       this.$el.tooltips({
@@ -147,10 +207,9 @@ async function playAudio() {
     },
     playPageFlipSound: function () {
       if (window.FlipbookSettings && window.FlipbookSettings.enableSound !== false) {
-        // Initialize audio if not already done
-        setTimeout(function () {
-          playAudio();
-        }, 0);
+        console.log('Playing page flip sound');
+        // Play audio immediately without setTimeout for better iOS compatibility
+        playAudio();
       }
     },
 
